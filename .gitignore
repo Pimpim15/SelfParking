@@ -1,0 +1,26 @@
+Temp/*
+Assets/Scripts/CarAgent.cs
+
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild*/
+[Bb]uilds*/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+*.csproj
+*.sln
+*.unitypackage
+
+# Packages cache gerado localmente
+Packages/PackageCache/
+
+# IDEs
+.vs/
+.vscode/
+
+# macOS/Windows
+.DS_Store
+Thumbs.db
