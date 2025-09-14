@@ -597,11 +597,11 @@ public class CarAgent : MonoBehaviour
     }
 
     void OnTriggerEnter(Collider other)
-    {
+    {        
         if (other.CompareTag("Spot") && other is BoxCollider)
         {
             isParking = true;
-            wasParking = false; 
+            wasParking = false;
             neverWasParking = false; // carro tentou estacionar
         }
     }

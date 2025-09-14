@@ -8,6 +8,15 @@ using UnityEngine;
 
 public class GAController : MonoBehaviour
 {
+    // Parâmetros de avaliação
+    [Header("Evaluation (Saved NN)")]
+    [SerializeField] string evaluateJsonPath = ""; // caminho para a rede salva (deixe vazio para treinar)
+    [SerializeField] int evaluateTrials = 10;          // número de tentativas para avaliação
+    [SerializeField] bool evaluateOnStart = false;
+    [SerializeField] float testNoisePos = 0.1f;    // ruído na posição inicial (x/z)
+    [SerializeField] float testNoiseRot = 2f;     // ruído na rotação inicial (y)
+
+    // Parâmetros do GA
     [Header("GA")]
     [SerializeField] int popSize = 60, elite = 6;
     [SerializeField] int[] hidden = { 24, 16 };
@@ -63,11 +72,21 @@ public class GAController : MonoBehaviour
         });
     }
 
-    void Start() 
+    void Start()
     {
         InitializeParkingSpots();
         SetupParkingLot();
-        SpawnInitial();
+
+        if (evaluateOnStart && !string.IsNullOrEmpty(evaluateJsonPath))
+        {
+            // usa a rede salva e roda N agentes
+            EvaluateSavedNetwork(evaluateJsonPath, evaluateTrials);
+        }
+        else
+        {
+            // fluxo normal: população, GA, etc.
+            SpawnInitial();
+        }
     }
 
     void Update()
@@ -76,6 +95,25 @@ public class GAController : MonoBehaviour
 
         if (population.All(a => a.Done))
         {
+            if (evaluateOnStart && !string.IsNullOrEmpty(evaluateJsonPath))
+            {
+                // avaliação concluída
+                Debug.Log("Avaliação concluída.");
+
+                // Coleta métricas da geração
+                var agentsMetricsTested = population.Select(a => a.GetFinalMetrics()).ToList();
+
+                // Exporta estatísticas / CSV / trajetórias / redes
+                ExportGenerationData(agentsMetricsTested, population);
+
+                foreach (var a in population) Destroy(a.gameObject);
+                population.Clear();
+
+                // Encerra a simulação
+                enabled = false;
+                return; 
+            }
+
             population = population.OrderByDescending(a => a.Fitness).ToList();
 
             // Coleta métricas da geração
@@ -169,7 +207,7 @@ public class GAController : MonoBehaviour
 
     CarAgent SpawnCar(NeuralNetwork nn)
     {
-        var go = Instantiate(carPrefab, RandomSpawn(), Quaternion.identity);
+        var go = Instantiate(carPrefab, RandomSpawn(), evaluateOnStart ? Quaternion.Euler(0f, UnityEngine.Random.Range(-testNoiseRot, testNoiseRot), 0f) : Quaternion.identity);
         var agent = go.AddComponent<CarAgent>();
 
         bool recordTraj = logTrajectoriesTop1; // registro para todos (descartamos depois, se quiser reduzir, use false aqui)
@@ -247,9 +285,45 @@ public class GAController : MonoBehaviour
         population = nextGen;
     }
 
-    Vector3 RandomSpawn() => new Vector3(UnityEngine.Random.Range(2f, 2.5f), 0, UnityEngine.Random.Range(12f, 13f));
+    Vector3 RandomSpawn() => new Vector3(UnityEngine.Random.Range(2f, 2.5f + (evaluateOnStart ? testNoisePos : 0)), 0, UnityEngine.Random.Range(12f, 13f + (evaluateOnStart ? testNoisePos : 0)));
 
     // -------- Export helpers --------
+
+    [ContextMenu("Evaluate Latest Saved Best (evaluateTrials)")]
+    public void EvaluateLatestSavedBest()
+    {
+        string root = System.IO.Path.Combine(Application.persistentDataPath, "SelfParkingLogs");
+        if (!System.IO.Directory.Exists(root)) { Debug.LogError("Logs não encontrados."); return; }
+
+        // pega a pasta de run mais recente
+        var runs = System.IO.Directory.GetDirectories(root);
+        if (runs.Length == 0) { Debug.LogError("Nenhum run encontrado."); return; }
+        string lastRun = runs.OrderByDescending(d => d).First();
+
+        // procura o summary mais recente em gen_*
+        var gens = System.IO.Directory.GetDirectories(lastRun, "gen_*");
+        if (gens.Length == 0) { Debug.LogError("Nenhuma geração encontrada."); return; }
+        string lastGen = gens.OrderByDescending(d => d).First();
+
+        string summaryPath = System.IO.Path.Combine(lastGen, $"gen_{System.IO.Path.GetFileName(lastGen).Substring(4)}_summary.json");
+        if (!System.IO.File.Exists(summaryPath))
+        {
+            // fallback: tenta qualquer summary.json dentro da pasta
+            var summaries = System.IO.Directory.GetFiles(lastGen, "*_summary.json");
+            if (summaries.Length == 0) { Debug.LogError("Summary não encontrado."); return; }
+            summaryPath = summaries[0];
+        }
+
+        // lê savedNetworks[0]
+        var json = System.IO.File.ReadAllText(summaryPath);
+        var summary = JsonUtility.FromJson<GenerationSummary>(json); // a mesma DTO já existe no GAController
+        if (summary == null || summary.savedNetworks == null || summary.savedNetworks.Length == 0)
+        {
+            Debug.LogError("Nenhuma rede salva no summary."); return;
+        }
+
+        EvaluateSavedNetwork(summary.savedNetworks[0], evaluateTrials);
+    }
 
     [Serializable]
     class GenerationSummary
@@ -284,7 +358,8 @@ public class GAController : MonoBehaviour
         Directory.CreateDirectory(genDir);
 
         // ------- CSV por agente -------
-        string csvPath = Path.Combine(genDir, $"gen_{generation:0000}_agents.csv");
+        string agentId = evaluateOnStart ? "test" : "gen";
+        string csvPath = Path.Combine(genDir, $"{agentId}_{generation:0000}_agents.csv");
         WriteAgentsCsv(csvPath, metrics);
 
         // ------- estatísticas agregadas -------
@@ -298,10 +373,10 @@ public class GAController : MonoBehaviour
 
         // salvar topN redes
         List<string> saved = new List<string>();
-        int topN = Mathf.Min(saveTopNNetworks, agents.Count);
+        int topN = evaluateOnStart ? evaluateTrials : Mathf.Min(saveTopNNetworks, agents.Count);
         for (int i = 0; i < topN; i++)
         {
-            string nnPath = Path.Combine(genDir, $"gen_{generation:0000}_best_{i+1}NN.json");
+            string nnPath = Path.Combine(genDir, $"{agentId}_{generation:0000}_best_{i+1}NN.json");
             agents[i].Net.SaveToJson(nnPath);
             saved.Add(nnPath);
         }
@@ -313,7 +388,7 @@ public class GAController : MonoBehaviour
             var traj = agents[0].GetTrajectory();
             if (traj != null && traj.Count > 0)
             {
-                trajPath = Path.Combine(genDir, $"gen_{generation:0000}_top1_traj.json");
+                trajPath = Path.Combine(genDir, $"{agentId}_{generation:0000}_top1_traj.json");
                 RunLogger.WriteJsonList(trajPath, traj); // <— aqui
             }
         }
@@ -344,7 +419,7 @@ public class GAController : MonoBehaviour
             agentsCsvPath = csvPath
         };
 
-        string sumPath = Path.Combine(genDir, $"gen_{generation:0000}_summary.json");
+        string sumPath = Path.Combine(genDir, $"{agentId}_{generation:0000}_summary.json");
         RunLogger.WriteJson(sumPath, summary);
 
         Debug.Log($"Gen {generation} | best={agents[0].Fitness:F2} | mean={mean:F2} | parked={parkedRate:P0} | saved {topN} nets");
