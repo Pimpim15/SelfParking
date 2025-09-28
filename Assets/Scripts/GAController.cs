@@ -18,8 +18,8 @@ public class GAController : MonoBehaviour
 
     // Parâmetros do GA
     [Header("GA")]
-    [SerializeField] int popSize = 60, elite = 6;
-    [SerializeField] int[] hidden = { 24, 16 };
+    [SerializeField] int popSize = 50, elite = 2;
+    [SerializeField] int[] hidden = { 32, 16, 8 };
     [SerializeField] float timeScale = 5f; // Tempo de simulação
 
     // Novos parâmetros expostos para controlar evolução

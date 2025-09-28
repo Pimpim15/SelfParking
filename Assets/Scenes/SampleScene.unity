@@ -157,6 +157,42 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: timeScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: testNoisePos
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: testNoiseRot
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: evaluateTrials
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: evaluateOnStart
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: evaluateJsonPath
+      value: C:\Users\micae\AppData\LocalLow\DefaultCompany\SelfParking\SelfParkingLogs\SelfParkingGA_20250903_150048\gen_0650\gen_0650_best_1NN.json
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: hidden.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: hidden.Array.data[0]
+      value: 32
+      objectReference: {fileID: 0}
+    - target: {fileID: -5948185314239733953, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
+      propertyPath: hidden.Array.data[2]
+      value: 8
+      objectReference: {fileID: 0}
     - target: {fileID: 123557811601470208, guid: 3e110e20fbaa9bb4daab6fea9335cc68, type: 3}
       propertyPath: m_Layer
       value: 0
